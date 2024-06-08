@@ -1,13 +1,13 @@
 import openai
 import os
 import requests
+import argparse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-
-openai.api_key = "your-api-key"  # Replace with your actual API key
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def generate_wordlist(prompt, max_tokens=2000):
     response = openai.ChatCompletion.create(
@@ -23,23 +23,17 @@ def generate_wordlist(prompt, max_tokens=2000):
     return wordlist
 
 def scan_website(base_url):
-    # Initialize the web driver (Chrome in this case)
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service)
-    
     driver.get(base_url)
-    
-    # Extract links from the page
     links = driver.find_elements(By.TAG_NAME, "a")
     paths = set()
-    
     for link in links:
         href = link.get_attribute("href")
         if href and href.startswith(base_url):
             path = href.replace(base_url, "")
             if path and path not in paths:
                 paths.add(path)
-
     driver.quit()
     return list(paths)
 
@@ -59,17 +53,20 @@ def scan_hidden_dirs(base_url, wordlist):
     return found_dirs
 
 def main():
-    base_url = "https://anchorsecurity.com.tr"
+    parser = argparse.ArgumentParser(description='Scan website for hidden directories using Selenium and OpenAI GPT-3.5-turbo.')
+    parser.add_argument('base_url', type=str, help='Base URL of the website to scan')
+    args = parser.parse_args()
+
+    base_url = args.base_url
     print("Scanning website using Selenium...")
     scanned_paths = scan_website(base_url)
     print(f"Scanned paths: {scanned_paths}")
-    
+
     prompt = f"Generate at least 1000 wordlist entries based on these paths: {', '.join(scanned_paths)}"
     print("Generating extended wordlist using GPT-3.5-turbo...")
     extended_wordlist = generate_wordlist(prompt)
-    print(f"Generated extended wordlist: {extended_wordlist[:10]}...")  # Print only the first 10 for brevity
-    
-    # Save the extended wordlist to a file
+    print(f"Generated extended wordlist: {extended_wordlist[:10]}...")
+
     with open("extended_wordlist.txt", "w") as f:
         for word in extended_wordlist:
             f.write(f"{word}\n")
@@ -78,8 +75,7 @@ def main():
 
     print("Scanning for hidden directories...")
     found_dirs = scan_hidden_dirs(base_url, extended_wordlist)
-    
-    # Save the found directories to a file
+
     with open("found_dirs.txt", "w") as f:
         for dir in found_dirs:
             f.write(f"{dir}\n")
