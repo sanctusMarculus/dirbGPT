@@ -52,8 +52,5 @@
 </ol>
 
 
-<h2>Contact</h2>
-<p>For any questions or suggestions, please open an issue in the GitHub repository.</p>
-
 </body>
 </html>
